@@ -1,5 +1,8 @@
+const { MessageMedia } = require("whatsapp-web.js");
 const whatsappService = require("../services/whatsappService");
-const { normalizeChatId, serializeMessage } = require("../utils/formatter");
+const { normalizeChatId, normalizeGroupId, toParticipantIds, serializeMessage } = require("../utils/formatter");
+
+const STATUS_BROADCAST_ID = "status@broadcast";
 
 const CHATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const chatsCache = {};
@@ -211,9 +214,417 @@ async function sendMessage(req, res) {
   }
 }
 
+// --- Group endpoints ---
+
+async function createGroup(req, res) {
+  try {
+    const { sessionId, name, participants, description } = req.body;
+
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ error: "name required" });
+    }
+
+    const participantIds = toParticipantIds(participants);
+    if (participantIds.length === 0) {
+      return res.status(400).json({ error: "participants required (array of phone numbers)" });
+    }
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
+    }
+
+    const chat = await state.client.createGroup(name.trim(), participantIds);
+    const groupId = chat.id?._serialized ?? chat.id?.id ?? String(chat.id);
+
+    if (description && typeof description === "string" && description.trim()) {
+      try {
+        await chat.setDescription(description.trim());
+      } catch (_) {
+        // ignore if setDescription fails (e.g. permissions)
+      }
+    }
+
+    res.status(201).json({
+      success: true,
+      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+      groupId,
+      name: chat.name ?? name.trim(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function addParticipants(req, res) {
+  try {
+    const sessionId = req.body.sessionId ?? req.query.sessionId;
+    const rawGroupId = req.body.groupId ?? req.query.groupId;
+    const participants = req.body.participants ?? req.query.participants;
+
+    const groupId = normalizeGroupId(rawGroupId);
+    if (!groupId) {
+      return res.status(400).json({ error: "groupId required (e.g. 120363xxx@g.us)" });
+    }
+
+    const participantIds = toParticipantIds(participants);
+    if (participantIds.length === 0) {
+      return res.status(400).json({ error: "participants required (array of phone numbers)" });
+    }
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
+    }
+
+    const chat = await state.client.getChatById(groupId);
+    if (!chat || !chat.isGroup) {
+      return res.status(404).json({ groupId, error: "Group not found" });
+    }
+
+    const result = await chat.addParticipants(participantIds);
+
+    res.json({
+      success: true,
+      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+      groupId,
+      result: result && typeof result === "object" ? result : { message: String(result) },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function removeParticipants(req, res) {
+  try {
+    const sessionId = req.body.sessionId ?? req.query.sessionId;
+    const rawGroupId = req.body.groupId ?? req.query.groupId;
+    const participants = req.body.participants ?? req.query.participants;
+
+    const groupId = normalizeGroupId(rawGroupId);
+    if (!groupId) {
+      return res.status(400).json({ error: "groupId required (e.g. 120363xxx@g.us)" });
+    }
+
+    const participantIds = toParticipantIds(participants);
+    if (participantIds.length === 0) {
+      return res.status(400).json({ error: "participants required (array of phone numbers)" });
+    }
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
+    }
+
+    const chat = await state.client.getChatById(groupId);
+    if (!chat || !chat.isGroup) {
+      return res.status(404).json({ groupId, error: "Group not found" });
+    }
+
+    const result = await chat.removeParticipants(participantIds);
+
+    res.json({
+      success: true,
+      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+      groupId,
+      status: result?.status,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function getGroupInfo(req, res) {
+  try {
+    const sessionId = req.query.sessionId || whatsappService.DEFAULT_SESSION_ID;
+    const rawGroupId = req.query.groupId;
+
+    const groupId = normalizeGroupId(rawGroupId);
+    if (!groupId) {
+      return res.status(400).json({ error: "groupId required (e.g. 120363xxx@g.us)" });
+    }
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId, error: "WhatsApp client not ready" });
+    }
+
+    const chat = await state.client.getChatById(groupId);
+    if (!chat || !chat.isGroup) {
+      return res.status(404).json({ groupId, error: "Group not found" });
+    }
+
+    const participants = (chat.participants || []).map((p) => ({
+      id: p.id?.id ?? p.id?._serialized ?? String(p.id),
+      isAdmin: Boolean(p.isAdmin),
+      isSuperAdmin: Boolean(p.isSuperAdmin),
+    }));
+
+    res.json({
+      sessionId,
+      groupId,
+      name: chat.name ?? "",
+      description: chat.description ?? "",
+      owner: chat.owner ?? null,
+      createdAt: chat.createdAt ?? null,
+      participants,
+      participantCount: participants.length,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function sendMessageToGroup(req, res) {
+  try {
+    const { sessionId, groupId: rawGroupId, message } = req.body;
+
+    if (!message || typeof message !== "string" || !message.trim()) {
+      return res.status(400).json({ error: "message required" });
+    }
+
+    const groupId = normalizeGroupId(rawGroupId);
+    if (!groupId) {
+      return res.status(400).json({ error: "groupId required (e.g. 120363xxx@g.us)" });
+    }
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
+    }
+
+    const chat = await state.client.getChatById(groupId);
+    if (!chat || !chat.isGroup) {
+      return res.status(404).json({ groupId, error: "Group not found" });
+    }
+
+    const result = await chat.sendMessage(message.trim());
+
+    res.json({
+      success: true,
+      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+      groupId,
+      id: result.id?._serialized,
+      timestamp: result.timestamp,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function changeGroupName(req, res) {
+  try {
+    const { sessionId, groupId: rawGroupId, name } = req.body;
+
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return res.status(400).json({ error: "name required" });
+    }
+
+    const groupId = normalizeGroupId(rawGroupId);
+    if (!groupId) {
+      return res.status(400).json({ error: "groupId required (e.g. 120363xxx@g.us)" });
+    }
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
+    }
+
+    const chat = await state.client.getChatById(groupId);
+    if (!chat || !chat.isGroup) {
+      return res.status(404).json({ groupId, error: "Group not found" });
+    }
+
+    const ok = await chat.setSubject(name.trim());
+
+    res.json({
+      success: true,
+      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+      groupId,
+      name: name.trim(),
+      updated: Boolean(ok),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function changeGroupDescription(req, res) {
+  try {
+    const { sessionId, groupId: rawGroupId, description } = req.body;
+
+    const groupId = normalizeGroupId(rawGroupId);
+    if (!groupId) {
+      return res.status(400).json({ error: "groupId required (e.g. 120363xxx@g.us)" });
+    }
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
+    }
+
+    const chat = await state.client.getChatById(groupId);
+    if (!chat || !chat.isGroup) {
+      return res.status(404).json({ groupId, error: "Group not found" });
+    }
+
+    const desc = typeof description === "string" ? description.trim() : "";
+    const ok = await chat.setDescription(desc);
+
+    res.json({
+      success: true,
+      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+      groupId,
+      description: desc,
+      updated: Boolean(ok),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+// --- Status APIs ---
+
+async function uploadStatus(req, res) {
+  try {
+    const { sessionId, type, caption, data, mimeType } = req.body;
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
+    }
+
+    const t = (type || "text").toLowerCase();
+
+    if (t === "text") {
+      const text = typeof caption === "string" ? caption.trim() : "";
+      await state.client.setStatus(text);
+      return res.status(201).json({
+        success: true,
+        sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+        type: "text",
+        status: text,
+      });
+    }
+
+    if (t === "image" || t === "video") {
+      if (!data || typeof data !== "string") {
+        return res.status(400).json({ error: "data (base64) required for image/video status" });
+      }
+      const mimetype = mimeType || (t === "image" ? "image/jpeg" : "video/mp4");
+      const media = new MessageMedia(mimetype, data.replace(/^data:[^;]+;base64,/, ""), undefined);
+      const result = await state.client.sendMessage(STATUS_BROADCAST_ID, media, { caption: typeof caption === "string" ? caption : undefined });
+      return res.status(201).json({
+        success: true,
+        sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+        type: t,
+        id: result.id?._serialized,
+        timestamp: result.timestamp,
+      });
+    }
+
+    return res.status(400).json({ error: "type must be text, image, or video" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function getStatuses(req, res) {
+  try {
+    const sessionId = req.query.sessionId || whatsappService.DEFAULT_SESSION_ID;
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId, error: "WhatsApp client not ready" });
+    }
+
+    const broadcasts = await state.client.getBroadcasts();
+    const list = (broadcasts || []).map((b) => ({
+      id: b.id?.id ?? b.id?._serialized ?? String(b.id),
+      timestamp: b.timestamp ?? null,
+      totalCount: b.totalCount ?? 0,
+      unreadCount: b.unreadCount ?? 0,
+    }));
+
+    res.json({
+      sessionId,
+      count: list.length,
+      statuses: list,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+async function deleteStatus(req, res) {
+  try {
+    const sessionId = req.body.sessionId ?? req.query.sessionId;
+    const messageId = req.body.messageId ?? req.query.messageId;
+
+    if (!messageId || typeof messageId !== "string" || !messageId.trim()) {
+      return res.status(400).json({ error: "messageId required" });
+    }
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
+    }
+
+    await state.client.revokeStatusMessage(messageId.trim());
+
+    res.json({
+      success: true,
+      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+      messageId: messageId.trim(),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   getChats,
   getMessages,
   getMessageMedia,
   sendMessage,
+  createGroup,
+  addParticipants,
+  removeParticipants,
+  getGroupInfo,
+  sendMessageToGroup,
+  changeGroupName,
+  changeGroupDescription,
+  uploadStatus,
+  getStatuses,
+  deleteStatus,
 };

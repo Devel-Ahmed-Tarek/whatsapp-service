@@ -237,6 +237,164 @@
         },
         "description": "إلغاء جلسة معينة وفك ربط الرقم"
       }
+    },
+    {
+      "name": "Groups",
+      "item": [
+        {
+          "name": "Create Group",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"name\": \"Group Name\",\n  \"participants\": [\"201111111111\", \"202222222222\"],\n  \"description\": \"Optional description\"\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/group/create", "host": ["{{baseUrl}}"], "path": ["group", "create"]},
+            "description": "إنشاء مجموعة جديدة"
+          }
+        },
+        {
+          "name": "Add Participants",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"participants\": [\"201111111111\", \"202222222222\"]\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/group/add-participants", "host": ["{{baseUrl}}"], "path": ["group", "add-participants"]},
+            "description": "إضافة أعضاء للمجموعة"
+          }
+        },
+        {
+          "name": "Remove Participants",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"participants\": [\"201111111111\"]\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/group/remove-participants", "host": ["{{baseUrl}}"], "path": ["group", "remove-participants"]},
+            "description": "إزالة أعضاء من المجموعة"
+          }
+        },
+        {
+          "name": "Get Group Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/group/info?sessionId={{sessionId}}&groupId=120363xxx@g.us",
+              "host": ["{{baseUrl}}"],
+              "path": ["group", "info"],
+              "query": [
+                {"key": "sessionId", "value": "{{sessionId}}"},
+                {"key": "groupId", "value": "120363xxx@g.us"}
+              ]
+            },
+            "description": "جلب معلومات المجموعة (الاسم، الوصف، الأعضاء، المالك)"
+          }
+        },
+        {
+          "name": "Send Message to Group",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"message\": \"مرحبا بالمجموعة\"\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/group/send-message", "host": ["{{baseUrl}}"], "path": ["group", "send-message"]},
+            "description": "إرسال رسالة للمجموعة"
+          }
+        },
+        {
+          "name": "Change Group Name",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"name\": \"New Group Name\"\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/group/name", "host": ["{{baseUrl}}"], "path": ["group", "name"]},
+            "description": "تغيير اسم المجموعة"
+          }
+        },
+        {
+          "name": "Change Group Description",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"description\": \"وصف جديد للمجموعة\"\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/group/description", "host": ["{{baseUrl}}"], "path": ["group", "description"]},
+            "description": "تغيير وصف المجموعة"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Status",
+      "item": [
+        {
+          "name": "Upload Status",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"type\": \"text\",\n  \"caption\": \"My status text\"\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/status/upload", "host": ["{{baseUrl}}"], "path": ["status", "upload"]},
+            "description": "رفع حالة: type=text يستخدم caption (نص About). type=image أو video يتطلب data (base64) واختياري mimeType, caption."
+          }
+        },
+        {
+          "name": "Upload Status (Image)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"type\": \"image\",\n  \"caption\": \"Optional caption\",\n  \"data\": \"BASE64_STRING_HERE\",\n  \"mimeType\": \"image/jpeg\"\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/status/upload", "host": ["{{baseUrl}}"], "path": ["status", "upload"]},
+            "description": "رفع صورة كحالة (استوري). data = base64 بدون data:image/...;base64, أو معه."
+          }
+        },
+        {
+          "name": "Get Statuses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/status?sessionId={{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["status"],
+              "query": [{"key": "sessionId", "value": "{{sessionId}}"}]
+            },
+            "description": "جلب قائمة البث/الحالات (statuses) المتاحة"
+          }
+        },
+        {
+          "name": "Delete Status",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"messageId\": \"STATUS_MESSAGE_ID\"\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/status", "host": ["{{baseUrl}}"], "path": ["status"]},
+            "description": "حذف حالة (استوري) بالـ messageId المرجع من رفع الحالة أو من getStatuses"
+          }
+        }
+      ]
     }
   ]
 }
