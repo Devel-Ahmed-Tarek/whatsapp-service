@@ -311,29 +311,16 @@
           }
         },
         {
-          "name": "Change Group Name",
+          "name": "Update Group (اسم + وصف + صورة)",
           "request": {
             "method": "PATCH",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"name\": \"New Group Name\"\n}"
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"name\": \"New Group Name\",\n  \"description\": \"وصف جديد للمجموعة\",\n  \"picture\": \"BASE64_IMAGE_STRING\",\n  \"pictureMimeType\": \"image/jpeg\"\n}"
             },
-            "url": {"raw": "{{baseUrl}}/group/name", "host": ["{{baseUrl}}"], "path": ["group", "name"]},
-            "description": "تغيير اسم المجموعة"
-          }
-        },
-        {
-          "name": "Change Group Description",
-          "request": {
-            "method": "PATCH",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"description\": \"وصف جديد للمجموعة\"\n}"
-            },
-            "url": {"raw": "{{baseUrl}}/group/description", "host": ["{{baseUrl}}"], "path": ["group", "description"]},
-            "description": "تغيير وصف المجموعة"
+            "url": {"raw": "{{baseUrl}}/group", "host": ["{{baseUrl}}"], "path": ["group"]},
+            "description": "تعديل المجموعة: أرسل واحد أو أكثر (name, description, picture). لو مفيش صلاحية يرجّع error في نفس الحقل."
           }
         }
       ]

@@ -21,14 +21,17 @@ function createMockClient() {
         removeParticipants: () => Promise.resolve({ status: 200 }),
         setSubject: () => Promise.resolve(true),
         setDescription: () => Promise.resolve(true),
+        setPicture: () => Promise.resolve(true),
       }),
     getMessageById: () => Promise.resolve(null),
     getBroadcasts: () => Promise.resolve([]),
     createGroup: (name) =>
       Promise.resolve({
-        id: { _serialized: "mock_group@g.us" },
+        id: { _serialized: "mock_group@g.us", id: "mock_group@g.us" },
         name: name || "Mock Group",
         setDescription: () => Promise.resolve(true),
+        setSubject: () => Promise.resolve(true),
+        setPicture: () => Promise.resolve(true),
       }),
     revokeStatusMessage: () => Promise.resolve(),
     setStatus: () => Promise.resolve(),

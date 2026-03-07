@@ -13,8 +13,7 @@ router.post("/group/add-participants", whatsappController.addParticipants);
 router.post("/group/remove-participants", whatsappController.removeParticipants);
 router.get("/group/info", whatsappController.getGroupInfo);
 router.post("/group/send-message", whatsappController.sendMessageToGroup);
-router.patch("/group/name", whatsappController.changeGroupName);
-router.patch("/group/description", whatsappController.changeGroupDescription);
+router.patch("/group", whatsappController.updateGroup);
 
 // Status APIs
 router.post("/status/upload", whatsappController.uploadStatus);

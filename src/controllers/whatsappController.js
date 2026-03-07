@@ -238,7 +238,18 @@ async function createGroup(req, res) {
     }
 
     const chat = await state.client.createGroup(name.trim(), participantIds);
-    const groupId = chat.id?._serialized ?? chat.id?.id ?? String(chat.id);
+    const groupId =
+      chat.id?._serialized ??
+      chat.id?.id ??
+      (typeof chat.id === "string" ? chat.id : null) ??
+      chat.gid ??
+      (chat.groupMetadata?.id?.id ?? chat.groupMetadata?.id?._serialized) ??
+      (chat._id?.id ?? chat._id?._serialized) ??
+      null;
+
+    if (!groupId) {
+      return res.status(500).json({ error: "Could not get group id from response" });
+    }
 
     if (description && typeof description === "string" && description.trim()) {
       try {
@@ -427,17 +438,23 @@ async function sendMessageToGroup(req, res) {
   }
 }
 
-async function changeGroupName(req, res) {
+async function updateGroup(req, res) {
   try {
-    const { sessionId, groupId: rawGroupId, name } = req.body;
-
-    if (!name || typeof name !== "string" || !name.trim()) {
-      return res.status(400).json({ error: "name required" });
-    }
+    const { sessionId, groupId: rawGroupId, name, description, picture, pictureMimeType } = req.body;
 
     const groupId = normalizeGroupId(rawGroupId);
     if (!groupId) {
       return res.status(400).json({ error: "groupId required (e.g. 120363xxx@g.us)" });
+    }
+
+    const hasName = name != null && typeof name === "string" && name.trim() !== "";
+    const hasDescription = description != null;
+    const hasPicture = picture != null && typeof picture === "string" && picture.length > 0;
+
+    if (!hasName && !hasDescription && !hasPicture) {
+      return res.status(400).json({
+        error: "At least one of name, description, or picture is required",
+      });
     }
 
     const state = whatsappService.getSessionState(sessionId);
@@ -453,52 +470,43 @@ async function changeGroupName(req, res) {
       return res.status(404).json({ groupId, error: "Group not found" });
     }
 
-    const ok = await chat.setSubject(name.trim());
+    const result = { sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, groupId };
 
-    res.json({
-      success: true,
-      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
-      groupId,
-      name: name.trim(),
-      updated: Boolean(ok),
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-}
-
-async function changeGroupDescription(req, res) {
-  try {
-    const { sessionId, groupId: rawGroupId, description } = req.body;
-
-    const groupId = normalizeGroupId(rawGroupId);
-    if (!groupId) {
-      return res.status(400).json({ error: "groupId required (e.g. 120363xxx@g.us)" });
+    if (hasName) {
+      try {
+        const ok = await chat.setSubject(name.trim());
+        result.name = { updated: Boolean(ok) };
+      } catch (err) {
+        result.name = { updated: false, error: err.message || "لا تملك صلاحية تغيير الاسم" };
+      }
     }
 
-    const state = whatsappService.getSessionState(sessionId);
-    if (!state) {
-      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
-    }
-    if (!state.clientReady) {
-      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
-    }
-
-    const chat = await state.client.getChatById(groupId);
-    if (!chat || !chat.isGroup) {
-      return res.status(404).json({ groupId, error: "Group not found" });
+    if (hasDescription) {
+      try {
+        const desc = typeof description === "string" ? description.trim() : "";
+        const ok = await chat.setDescription(desc);
+        result.description = { updated: Boolean(ok) };
+      } catch (err) {
+        result.description = { updated: false, error: err.message || "لا تملك صلاحية تغيير الوصف" };
+      }
     }
 
-    const desc = typeof description === "string" ? description.trim() : "";
-    const ok = await chat.setDescription(desc);
+    if (hasPicture) {
+      try {
+        const mimeType = pictureMimeType || "image/jpeg";
+        const data = picture.replace(/^data:[^;]+;base64,/, "");
+        const media = new MessageMedia(mimeType, data, undefined);
+        const ok = await chat.setPicture(media);
+        result.picture = { updated: Boolean(ok) };
+      } catch (err) {
+        result.picture = {
+          updated: false,
+          error: err.message || "لا تملك صلاحية تغيير صورة المجموعة",
+        };
+      }
+    }
 
-    res.json({
-      success: true,
-      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
-      groupId,
-      description: desc,
-      updated: Boolean(ok),
-    });
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -622,8 +630,7 @@ module.exports = {
   removeParticipants,
   getGroupInfo,
   sendMessageToGroup,
-  changeGroupName,
-  changeGroupDescription,
+  updateGroup,
   uploadStatus,
   getStatuses,
   deleteStatus,
