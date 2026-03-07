@@ -12,9 +12,15 @@ app.use(express.json());
 app.use("/", sessionRoutes);
 app.use("/", whatsappRoutes);
 
+const isMock = process.env.MOCK_WHATSAPP === "1" || process.env.MOCK_WHATSAPP === "true";
+
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
-  console.log("Initializing default WhatsApp session...");
+  if (isMock) {
+    console.log("MOCK MODE: WhatsApp disabled - using fake responses (MOCK_WHATSAPP=1)");
+  } else {
+    console.log("Initializing default WhatsApp session...");
+  }
   whatsappService.getOrCreateSession(whatsappService.DEFAULT_SESSION_ID);
 });
 

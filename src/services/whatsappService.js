@@ -1,3 +1,8 @@
+if (process.env.MOCK_WHATSAPP === "1" || process.env.MOCK_WHATSAPP === "true") {
+  module.exports = require("./whatsappServiceMock");
+  return;
+}
+
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const qrcodeTerminal = require("qrcode-terminal");
 const fs = require("fs");
