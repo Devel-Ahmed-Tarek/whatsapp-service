@@ -1,0 +1,242 @@
+{
+  "info": {
+    "name": "WhatsApp Microservice API",
+    "description": "مجموعة طلبات API لميكروسيرفس واتساب - يدعم أكثر من رقم (sessionId)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "sessionId",
+      "value": "default"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        },
+        "description": "التأكد من أن السيرفر شغال"
+      }
+    },
+    {
+      "name": "Session Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/session-status?sessionId={{sessionId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["session-status"],
+          "query": [
+            {
+              "key": "sessionId",
+              "value": "{{sessionId}}",
+              "description": "معرف الجلسة (رقم واتساب)"
+            }
+          ]
+        },
+        "description": "معرفة حالة الجلسة: موجودة؟ متصلة؟"
+      }
+    },
+    {
+      "name": "Get All Sessions",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/sessions",
+          "host": ["{{baseUrl}}"],
+          "path": ["sessions"]
+        },
+        "description": "جلب كل الجلسات النشطة"
+      }
+    },
+    {
+      "name": "Get Chats (شاتات السيشن)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/chats?sessionId={{sessionId}}&limit=50&offset=0",
+          "host": ["{{baseUrl}}"],
+          "path": ["chats"],
+          "query": [
+            {
+              "key": "sessionId",
+              "value": "{{sessionId}}",
+              "description": "معرف الجلسة"
+            },
+            {
+              "key": "limit",
+              "value": "50",
+              "description": "عدد الشاتات في الصفحة (افتراضي 50، أقصى 500)"
+            },
+            {
+              "key": "offset",
+              "value": "0",
+              "description": "ابدأ من (لصفحة التالية: 50، 100، ...)"
+            },
+            {
+              "key": "refresh",
+              "value": "0",
+              "description": "1 أو true لتحديث الكاش من واتساب"
+            }
+          ]
+        },
+        "description": "جلب الشاتات مع كاش + pagination. أول طلب قد يأخذ وقتاً، التالية فورية."
+      }
+    },
+    {
+      "name": "Get Messages (رسائل شات)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/messages?sessionId={{sessionId}}&chatId=201234567890@c.us&limit=50&offset=0&order=desc",
+          "host": ["{{baseUrl}}"],
+          "path": ["messages"],
+          "query": [
+            {
+              "key": "sessionId",
+              "value": "{{sessionId}}",
+              "description": "معرف الجلسة"
+            },
+            {
+              "key": "chatId",
+              "value": "201234567890@c.us",
+              "description": "معرف الشات (رقم@c.us أو مجموعة@g.us)"
+            },
+            {
+              "key": "limit",
+              "value": "50",
+              "description": "عدد الرسائل (افتراضي 50، أقصى 100)"
+            },
+            {
+              "key": "offset",
+              "value": "0",
+              "description": "للصفحة التالية"
+            },
+            {
+              "key": "order",
+              "value": "desc",
+              "description": "asc = الأقدم أولاً، desc = الأحدث أولاً"
+            },
+            {
+              "key": "fromMe",
+              "value": "",
+              "description": "اختياري: true أو false لتصفية رسائلي فقط أو الأخرى فقط"
+            },
+            {
+              "key": "includeMedia",
+              "value": "false",
+              "description": "true = تضمين الميديا كـ base64 داخل كل رسالة (صور، فيديو، ملفات، ريكورد)"
+            }
+          ]
+        },
+        "description": "جلب رسائل شات معين. رسائل الميديا فيها mediaUrl لتحميل الملف، أو استخدم includeMedia=true لتضمين الـ base64"
+      }
+    },
+    {
+      "name": "Get Message Media (تحميل ميديا رسالة)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/message-media?sessionId={{sessionId}}&messageId=MESSAGE_ID_HERE",
+          "host": ["{{baseUrl}}"],
+          "path": ["message-media"],
+          "query": [
+            {
+              "key": "sessionId",
+              "value": "{{sessionId}}",
+              "description": "معرف الجلسة"
+            },
+            {
+              "key": "messageId",
+              "value": "MESSAGE_ID_HERE",
+              "description": "معرف الرسالة (من GET /messages)"
+            },
+            {
+              "key": "format",
+              "value": "",
+              "description": "اختياري: json لرجوع { mimeType, data: base64 }"
+            }
+          ]
+        },
+        "description": "تحميل ميديا رسالة (صورة، فيديو، ملف، ريكورد). بدون format يرجع الملف مباشرة."
+      }
+    },
+    {
+      "name": "Get QR Code",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/qr?sessionId={{sessionId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["qr"],
+          "query": [
+            {
+              "key": "sessionId",
+              "value": "{{sessionId}}",
+              "description": "معرف الجلسة لربط الرقم"
+            }
+          ]
+        },
+        "description": "الحصول على QR code لربط رقم واتساب"
+      }
+    },
+    {
+      "name": "Send Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"phoneNumber\": \"201234567890\",\n  \"message\": \"مرحبا من واتساب API\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/send-message",
+          "host": ["{{baseUrl}}"],
+          "path": ["send-message"]
+        },
+        "description": "إرسال رسالة نصية من رقم معين"
+      }
+    },
+    {
+      "name": "Delete Session (فك الربط)",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/session?sessionId={{sessionId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["session"],
+          "query": [
+            {
+              "key": "sessionId",
+              "value": "{{sessionId}}",
+              "description": "معرف الجلسة المراد إلغاؤها"
+            }
+          ]
+        },
+        "description": "إلغاء جلسة معينة وفك ربط الرقم"
+      }
+    }
+  ]
+}
