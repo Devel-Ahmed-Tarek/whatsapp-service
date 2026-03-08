@@ -1,439 +1,439 @@
-{
-  "info": {
-    "name": "WhatsApp Microservice API",
-    "description": "مجموعة طلبات API لميكروسيرفس واتساب - يدعم أكثر من رقم (sessionId)",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://72.62.151.211:3000"
+  {
+    "info": {
+      "name": "WhatsApp Microservice API",
+      "description": "مجموعة طلبات API لميكروسيرفس واتساب - يدعم أكثر من رقم (sessionId)",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
-    {
-      "key": "sessionId",
-      "value": "default"
-    }
-  ],
-  "item": [
-    {
-      "name": "Health",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/health",
-          "host": ["{{baseUrl}}"],
-          "path": ["health"]
-        },
-        "description": "التأكد من أن السيرفر شغال"
+    "variable": [
+      {
+        "key": "baseUrl",
+        "value": "http://72.62.151.211:3000"
+      },
+      {
+        "key": "sessionId",
+        "value": "default"
       }
-    },
-    {
-      "name": "Session Status",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/session-status?sessionId={{sessionId}}",
-          "host": ["{{baseUrl}}"],
-          "path": ["session-status"],
-          "query": [
+    ],
+    "item": [
+      {
+        "name": "Health",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/health",
+            "host": ["{{baseUrl}}"],
+            "path": ["health"]
+          },
+          "description": "التأكد من أن السيرفر شغال"
+        }
+      },
+      {
+        "name": "Session Status",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/session-status?sessionId={{sessionId}}",
+            "host": ["{{baseUrl}}"],
+            "path": ["session-status"],
+            "query": [
+              {
+                "key": "sessionId",
+                "value": "{{sessionId}}",
+                "description": "معرف الجلسة (رقم واتساب)"
+              }
+            ]
+          },
+          "description": "معرفة حالة الجلسة: موجودة؟ متصلة؟"
+        }
+      },
+      {
+        "name": "Get All Sessions",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/sessions",
+            "host": ["{{baseUrl}}"],
+            "path": ["sessions"]
+          },
+          "description": "جلب كل الجلسات النشطة"
+        }
+      },
+      {
+        "name": "Get Chats (شاتات السيشن)",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/chats?sessionId={{sessionId}}&limit=50&offset=0",
+            "host": ["{{baseUrl}}"],
+            "path": ["chats"],
+            "query": [
+              {
+                "key": "sessionId",
+                "value": "{{sessionId}}",
+                "description": "معرف الجلسة"
+              },
+              {
+                "key": "limit",
+                "value": "50",
+                "description": "عدد الشاتات في الصفحة (افتراضي 50، أقصى 500)"
+              },
+              {
+                "key": "offset",
+                "value": "0",
+                "description": "ابدأ من (لصفحة التالية: 50، 100، ...)"
+              },
+              {
+                "key": "refresh",
+                "value": "0",
+                "description": "1 أو true لتحديث الكاش من واتساب"
+              }
+            ]
+          },
+          "description": "جلب الشاتات مع كاش + pagination. أول طلب قد يأخذ وقتاً، التالية فورية."
+        }
+      },
+      {
+        "name": "Get Messages (رسائل شات)",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/messages?sessionId={{sessionId}}&chatId=201234567890@c.us&limit=50&offset=0&order=desc",
+            "host": ["{{baseUrl}}"],
+            "path": ["messages"],
+            "query": [
+              {
+                "key": "sessionId",
+                "value": "{{sessionId}}",
+                "description": "معرف الجلسة"
+              },
+              {
+                "key": "chatId",
+                "value": "201234567890@c.us",
+                "description": "معرف الشات (رقم@c.us أو مجموعة@g.us)"
+              },
+              {
+                "key": "limit",
+                "value": "50",
+                "description": "عدد الرسائل (افتراضي 50، أقصى 100)"
+              },
+              {
+                "key": "offset",
+                "value": "0",
+                "description": "للصفحة التالية"
+              },
+              {
+                "key": "order",
+                "value": "desc",
+                "description": "asc = الأقدم أولاً، desc = الأحدث أولاً"
+              },
+              {
+                "key": "fromMe",
+                "value": "",
+                "description": "اختياري: true أو false لتصفية رسائلي فقط أو الأخرى فقط"
+              },
+              {
+                "key": "includeMedia",
+                "value": "false",
+                "description": "true = تضمين الميديا كـ base64 داخل كل رسالة (صور، فيديو، ملفات، ريكورد)"
+              }
+            ]
+          },
+          "description": "جلب رسائل شات معين. رسائل الميديا فيها mediaUrl لتحميل الملف، أو استخدم includeMedia=true لتضمين الـ base64"
+        }
+      },
+      {
+        "name": "Get Message Media (تحميل ميديا رسالة)",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/message-media?sessionId={{sessionId}}&messageId=MESSAGE_ID_HERE",
+            "host": ["{{baseUrl}}"],
+            "path": ["message-media"],
+            "query": [
+              {
+                "key": "sessionId",
+                "value": "{{sessionId}}",
+                "description": "معرف الجلسة"
+              },
+              {
+                "key": "messageId",
+                "value": "MESSAGE_ID_HERE",
+                "description": "معرف الرسالة (من GET /messages)"
+              },
+              {
+                "key": "format",
+                "value": "",
+                "description": "اختياري: json لرجوع { mimeType, data: base64 }"
+              }
+            ]
+          },
+          "description": "تحميل ميديا رسالة (صورة، فيديو، ملف، ريكورد). بدون format يرجع الملف مباشرة."
+        }
+      },
+      {
+        "name": "Get QR Code",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/qr?sessionId={{sessionId}}",
+            "host": ["{{baseUrl}}"],
+            "path": ["qr"],
+            "query": [
+              {
+                "key": "sessionId",
+                "value": "{{sessionId}}",
+                "description": "معرف الجلسة لربط الرقم"
+              }
+            ]
+          },
+          "description": "الحصول على QR code لربط رقم واتساب"
+        }
+      },
+      {
+        "name": "Send Message",
+        "request": {
+          "method": "POST",
+          "header": [
             {
-              "key": "sessionId",
-              "value": "{{sessionId}}",
-              "description": "معرف الجلسة (رقم واتساب)"
+              "key": "Content-Type",
+              "value": "application/json"
             }
-          ]
-        },
-        "description": "معرفة حالة الجلسة: موجودة؟ متصلة؟"
-      }
-    },
-    {
-      "name": "Get All Sessions",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/sessions",
-          "host": ["{{baseUrl}}"],
-          "path": ["sessions"]
-        },
-        "description": "جلب كل الجلسات النشطة"
-      }
-    },
-    {
-      "name": "Get Chats (شاتات السيشن)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/chats?sessionId={{sessionId}}&limit=50&offset=0",
-          "host": ["{{baseUrl}}"],
-          "path": ["chats"],
-          "query": [
-            {
-              "key": "sessionId",
-              "value": "{{sessionId}}",
-              "description": "معرف الجلسة"
-            },
-            {
-              "key": "limit",
-              "value": "50",
-              "description": "عدد الشاتات في الصفحة (افتراضي 50، أقصى 500)"
-            },
-            {
-              "key": "offset",
-              "value": "0",
-              "description": "ابدأ من (لصفحة التالية: 50، 100، ...)"
-            },
-            {
-              "key": "refresh",
-              "value": "0",
-              "description": "1 أو true لتحديث الكاش من واتساب"
-            }
-          ]
-        },
-        "description": "جلب الشاتات مع كاش + pagination. أول طلب قد يأخذ وقتاً، التالية فورية."
-      }
-    },
-    {
-      "name": "Get Messages (رسائل شات)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/messages?sessionId={{sessionId}}&chatId=201234567890@c.us&limit=50&offset=0&order=desc",
-          "host": ["{{baseUrl}}"],
-          "path": ["messages"],
-          "query": [
-            {
-              "key": "sessionId",
-              "value": "{{sessionId}}",
-              "description": "معرف الجلسة"
-            },
-            {
-              "key": "chatId",
-              "value": "201234567890@c.us",
-              "description": "معرف الشات (رقم@c.us أو مجموعة@g.us)"
-            },
-            {
-              "key": "limit",
-              "value": "50",
-              "description": "عدد الرسائل (افتراضي 50، أقصى 100)"
-            },
-            {
-              "key": "offset",
-              "value": "0",
-              "description": "للصفحة التالية"
-            },
-            {
-              "key": "order",
-              "value": "desc",
-              "description": "asc = الأقدم أولاً، desc = الأحدث أولاً"
-            },
-            {
-              "key": "fromMe",
-              "value": "",
-              "description": "اختياري: true أو false لتصفية رسائلي فقط أو الأخرى فقط"
-            },
-            {
-              "key": "includeMedia",
-              "value": "false",
-              "description": "true = تضمين الميديا كـ base64 داخل كل رسالة (صور، فيديو، ملفات، ريكورد)"
-            }
-          ]
-        },
-        "description": "جلب رسائل شات معين. رسائل الميديا فيها mediaUrl لتحميل الملف، أو استخدم includeMedia=true لتضمين الـ base64"
-      }
-    },
-    {
-      "name": "Get Message Media (تحميل ميديا رسالة)",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/message-media?sessionId={{sessionId}}&messageId=MESSAGE_ID_HERE",
-          "host": ["{{baseUrl}}"],
-          "path": ["message-media"],
-          "query": [
-            {
-              "key": "sessionId",
-              "value": "{{sessionId}}",
-              "description": "معرف الجلسة"
-            },
-            {
-              "key": "messageId",
-              "value": "MESSAGE_ID_HERE",
-              "description": "معرف الرسالة (من GET /messages)"
-            },
-            {
-              "key": "format",
-              "value": "",
-              "description": "اختياري: json لرجوع { mimeType, data: base64 }"
-            }
-          ]
-        },
-        "description": "تحميل ميديا رسالة (صورة، فيديو، ملف، ريكورد). بدون format يرجع الملف مباشرة."
-      }
-    },
-    {
-      "name": "Get QR Code",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/qr?sessionId={{sessionId}}",
-          "host": ["{{baseUrl}}"],
-          "path": ["qr"],
-          "query": [
-            {
-              "key": "sessionId",
-              "value": "{{sessionId}}",
-              "description": "معرف الجلسة لربط الرقم"
-            }
-          ]
-        },
-        "description": "الحصول على QR code لربط رقم واتساب"
-      }
-    },
-    {
-      "name": "Send Message",
-      "request": {
-        "method": "POST",
-        "header": [
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"phoneNumber\": \"201234567890\",\n  \"message\": \"مرحبا من واتساب API\"\n}"
+          },
+          "url": {
+            "raw": "{{baseUrl}}/send-message",
+            "host": ["{{baseUrl}}"],
+            "path": ["send-message"]
+          },
+          "description": "إرسال رسالة نصية من رقم معين"
+        }
+      },
+      {
+        "name": "Pin / Unpin Chat (تثبيت شات أو مجموعة)",
+        "request": {
+          "method": "PATCH",
+          "header": [{"key": "Content-Type", "value": "application/json"}],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"chatId\": \"201234567890@c.us\",\n  \"pinned\": true\n}"
+          },
+          "url": {"raw": "{{baseUrl}}/chat/pin", "host": ["{{baseUrl}}"], "path": ["chat", "pin"]},
+          "description": "تثبيت أو إلغاء تثبيت شات (محادثة أو مجموعة). chatId: رقم@c.us أو مجموعة@g.us. pinned: true = تثبيت، false = إلغاء تثبيت"
+        }
+      },
+      {
+        "name": "Delete Session (فك الربط)",
+        "request": {
+          "method": "DELETE",
+          "header": [],
+          "url": {
+            "raw": "{{baseUrl}}/session?sessionId={{sessionId}}",
+            "host": ["{{baseUrl}}"],
+            "path": ["session"],
+            "query": [
+              {
+                "key": "sessionId",
+                "value": "{{sessionId}}",
+                "description": "معرف الجلسة المراد إلغاؤها"
+              }
+            ]
+          },
+          "description": "إلغاء جلسة معينة وفك ربط الرقم"
+        }
+      },
+      {
+        "name": "Groups",
+        "item": [
           {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"phoneNumber\": \"201234567890\",\n  \"message\": \"مرحبا من واتساب API\"\n}"
-        },
-        "url": {
-          "raw": "{{baseUrl}}/send-message",
-          "host": ["{{baseUrl}}"],
-          "path": ["send-message"]
-        },
-        "description": "إرسال رسالة نصية من رقم معين"
-      }
-    },
-    {
-      "name": "Pin / Unpin Chat (تثبيت شات أو مجموعة)",
-      "request": {
-        "method": "PATCH",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"chatId\": \"201234567890@c.us\",\n  \"pinned\": true\n}"
-        },
-        "url": {"raw": "{{baseUrl}}/chat/pin", "host": ["{{baseUrl}}"], "path": ["chat", "pin"]},
-        "description": "تثبيت أو إلغاء تثبيت شات (محادثة أو مجموعة). chatId: رقم@c.us أو مجموعة@g.us. pinned: true = تثبيت، false = إلغاء تثبيت"
-      }
-    },
-    {
-      "name": "Delete Session (فك الربط)",
-      "request": {
-        "method": "DELETE",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/session?sessionId={{sessionId}}",
-          "host": ["{{baseUrl}}"],
-          "path": ["session"],
-          "query": [
-            {
-              "key": "sessionId",
-              "value": "{{sessionId}}",
-              "description": "معرف الجلسة المراد إلغاؤها"
+            "name": "Create Group",
+            "request": {
+              "method": "POST",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"name\": \"Group Name\",\n  \"participants\": [\"201111111111\", \"202222222222\"],\n  \"description\": \"Optional description\"\n}"
+              },
+              "url": {"raw": "{{baseUrl}}/group/create", "host": ["{{baseUrl}}"], "path": ["group", "create"]},
+              "description": "إنشاء مجموعة جديدة"
             }
-          ]
-        },
-        "description": "إلغاء جلسة معينة وفك ربط الرقم"
+          },
+          {
+            "name": "Add Participants",
+            "request": {
+              "method": "POST",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"participants\": [\"201111111111\", \"202222222222\"]\n}"
+              },
+              "url": {"raw": "{{baseUrl}}/group/add-participants", "host": ["{{baseUrl}}"], "path": ["group", "add-participants"]},
+              "description": "إضافة أعضاء للمجموعة"
+            }
+          },
+          {
+            "name": "Remove Participants",
+            "request": {
+              "method": "POST",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"participants\": [\"201111111111\"]\n}"
+              },
+              "url": {"raw": "{{baseUrl}}/group/remove-participants", "host": ["{{baseUrl}}"], "path": ["group", "remove-participants"]},
+              "description": "إزالة أعضاء من المجموعة"
+            }
+          },
+          {
+            "name": "قفل/فتح الإرسال (فقط أدمنز يبعوا)",
+            "request": {
+              "method": "PATCH",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"onlyAdmins\": true\n}"
+              },
+              "url": {"raw": "{{baseUrl}}/group/send-permission", "host": ["{{baseUrl}}"], "path": ["group", "send-permission"]},
+              "description": "onlyAdmins: true = قفل المجموعة (فقط الأدمنز يبعوا)، false = فتح (الكل يبعّت)"
+            }
+          },
+          {
+            "name": "ترقية أعضاء (أدمن)",
+            "request": {
+              "method": "POST",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"participants\": [\"201111111111\"]\n}"
+              },
+              "url": {"raw": "{{baseUrl}}/group/promote", "host": ["{{baseUrl}}"], "path": ["group", "promote"]},
+              "description": "ترقية رقم لأدمن فيقدر يبعّت لو المجموعة مقفولة"
+            }
+          },
+          {
+            "name": "تنزيل أعضاء (إلغاء أدمن)",
+            "request": {
+              "method": "POST",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"participants\": [\"201111111111\"]\n}"
+              },
+              "url": {"raw": "{{baseUrl}}/group/demote", "host": ["{{baseUrl}}"], "path": ["group", "demote"]},
+              "description": "تنزيل رقم من الأدمن فما يقدرش يبعّت لو المجموعة مقفولة"
+            }
+          },
+          {
+            "name": "Get Group Info",
+            "request": {
+              "method": "GET",
+              "header": [],
+              "url": {
+                "raw": "{{baseUrl}}/group/info?sessionId={{sessionId}}&groupId=120363xxx@g.us",
+                "host": ["{{baseUrl}}"],
+                "path": ["group", "info"],
+                "query": [
+                  {"key": "sessionId", "value": "{{sessionId}}"},
+                  {"key": "groupId", "value": "120363xxx@g.us"}
+                ]
+              },
+              "description": "جلب معلومات المجموعة (الاسم، الوصف، الأعضاء، المالك)"
+            }
+          },
+          {
+            "name": "Send Message to Group",
+            "request": {
+              "method": "POST",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"message\": \"مرحبا بالمجموعة\"\n}"
+              },
+              "url": {"raw": "{{baseUrl}}/group/send-message", "host": ["{{baseUrl}}"], "path": ["group", "send-message"]},
+              "description": "إرسال رسالة للمجموعة"
+            }
+          },
+          {
+            "name": "Update Group (اسم + وصف + صورة)",
+            "request": {
+              "method": "PATCH",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"name\": \"New Group Name\",\n  \"description\": \"وصف جديد للمجموعة\",\n  \"picture\": \"BASE64_IMAGE_STRING\",\n  \"pictureMimeType\": \"image/jpeg\"\n}"
+              },
+              "url": {"raw": "{{baseUrl}}/group", "host": ["{{baseUrl}}"], "path": ["group"]},
+              "description": "تعديل المجموعة: أرسل واحد أو أكثر (name, description, picture). لو مفيش صلاحية يرجّع error في نفس الحقل."
+            }
+          }
+        ]
+      },
+      {
+        "name": "Status",
+        "item": [
+          {
+            "name": "Upload Status",
+            "request": {
+              "method": "POST",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"type\": \"text\",\n  \"caption\": \"My status text\"\n}"
+              },
+              "url": {"raw": "{{baseUrl}}/status/upload", "host": ["{{baseUrl}}"], "path": ["status", "upload"]},
+              "description": "رفع حالة: type=text يستخدم caption (نص About). type=image أو video يتطلب data (base64) واختياري mimeType, caption."
+            }
+          },
+          {
+            "name": "Upload Status (Image)",
+            "request": {
+              "method": "POST",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"type\": \"image\",\n  \"caption\": \"Optional caption\",\n  \"data\": \"BASE64_STRING_HERE\",\n  \"mimeType\": \"image/jpeg\"\n}"
+              },
+              "url": {"raw": "{{baseUrl}}/status/upload", "host": ["{{baseUrl}}"], "path": ["status", "upload"]},
+              "description": "رفع صورة كحالة (استوري). data = base64 بدون data:image/...;base64, أو معه."
+            }
+          },
+          {
+            "name": "Get Statuses",
+            "request": {
+              "method": "GET",
+              "header": [],
+              "url": {
+                "raw": "{{baseUrl}}/status?sessionId={{sessionId}}",
+                "host": ["{{baseUrl}}"],
+                "path": ["status"],
+                "query": [{"key": "sessionId", "value": "{{sessionId}}"}]
+              },
+              "description": "جلب قائمة البث/الحالات (statuses) المتاحة"
+            }
+          },
+          {
+            "name": "Delete Status",
+            "request": {
+              "method": "DELETE",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"messageId\": \"STATUS_MESSAGE_ID\"\n}"
+              },
+              "url": {"raw": "{{baseUrl}}/status", "host": ["{{baseUrl}}"], "path": ["status"]},
+              "description": "حذف حالة (استوري) بالـ messageId المرجع من رفع الحالة أو من getStatuses"
+            }
+          }
+        ]
       }
-    },
-    {
-      "name": "Groups",
-      "item": [
-        {
-          "name": "Create Group",
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"name\": \"Group Name\",\n  \"participants\": [\"201111111111\", \"202222222222\"],\n  \"description\": \"Optional description\"\n}"
-            },
-            "url": {"raw": "{{baseUrl}}/group/create", "host": ["{{baseUrl}}"], "path": ["group", "create"]},
-            "description": "إنشاء مجموعة جديدة"
-          }
-        },
-        {
-          "name": "Add Participants",
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"participants\": [\"201111111111\", \"202222222222\"]\n}"
-            },
-            "url": {"raw": "{{baseUrl}}/group/add-participants", "host": ["{{baseUrl}}"], "path": ["group", "add-participants"]},
-            "description": "إضافة أعضاء للمجموعة"
-          }
-        },
-        {
-          "name": "Remove Participants",
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"participants\": [\"201111111111\"]\n}"
-            },
-            "url": {"raw": "{{baseUrl}}/group/remove-participants", "host": ["{{baseUrl}}"], "path": ["group", "remove-participants"]},
-            "description": "إزالة أعضاء من المجموعة"
-          }
-        },
-        {
-          "name": "قفل/فتح الإرسال (فقط أدمنز يبعوا)",
-          "request": {
-            "method": "PATCH",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"onlyAdmins\": true\n}"
-            },
-            "url": {"raw": "{{baseUrl}}/group/send-permission", "host": ["{{baseUrl}}"], "path": ["group", "send-permission"]},
-            "description": "onlyAdmins: true = قفل المجموعة (فقط الأدمنز يبعوا)، false = فتح (الكل يبعّت)"
-          }
-        },
-        {
-          "name": "ترقية أعضاء (أدمن)",
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"participants\": [\"201111111111\"]\n}"
-            },
-            "url": {"raw": "{{baseUrl}}/group/promote", "host": ["{{baseUrl}}"], "path": ["group", "promote"]},
-            "description": "ترقية رقم لأدمن فيقدر يبعّت لو المجموعة مقفولة"
-          }
-        },
-        {
-          "name": "تنزيل أعضاء (إلغاء أدمن)",
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"participants\": [\"201111111111\"]\n}"
-            },
-            "url": {"raw": "{{baseUrl}}/group/demote", "host": ["{{baseUrl}}"], "path": ["group", "demote"]},
-            "description": "تنزيل رقم من الأدمن فما يقدرش يبعّت لو المجموعة مقفولة"
-          }
-        },
-        {
-          "name": "Get Group Info",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/group/info?sessionId={{sessionId}}&groupId=120363xxx@g.us",
-              "host": ["{{baseUrl}}"],
-              "path": ["group", "info"],
-              "query": [
-                {"key": "sessionId", "value": "{{sessionId}}"},
-                {"key": "groupId", "value": "120363xxx@g.us"}
-              ]
-            },
-            "description": "جلب معلومات المجموعة (الاسم، الوصف، الأعضاء، المالك)"
-          }
-        },
-        {
-          "name": "Send Message to Group",
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"message\": \"مرحبا بالمجموعة\"\n}"
-            },
-            "url": {"raw": "{{baseUrl}}/group/send-message", "host": ["{{baseUrl}}"], "path": ["group", "send-message"]},
-            "description": "إرسال رسالة للمجموعة"
-          }
-        },
-        {
-          "name": "Update Group (اسم + وصف + صورة)",
-          "request": {
-            "method": "PATCH",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"name\": \"New Group Name\",\n  \"description\": \"وصف جديد للمجموعة\",\n  \"picture\": \"BASE64_IMAGE_STRING\",\n  \"pictureMimeType\": \"image/jpeg\"\n}"
-            },
-            "url": {"raw": "{{baseUrl}}/group", "host": ["{{baseUrl}}"], "path": ["group"]},
-            "description": "تعديل المجموعة: أرسل واحد أو أكثر (name, description, picture). لو مفيش صلاحية يرجّع error في نفس الحقل."
-          }
-        }
-      ]
-    },
-    {
-      "name": "Status",
-      "item": [
-        {
-          "name": "Upload Status",
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"type\": \"text\",\n  \"caption\": \"My status text\"\n}"
-            },
-            "url": {"raw": "{{baseUrl}}/status/upload", "host": ["{{baseUrl}}"], "path": ["status", "upload"]},
-            "description": "رفع حالة: type=text يستخدم caption (نص About). type=image أو video يتطلب data (base64) واختياري mimeType, caption."
-          }
-        },
-        {
-          "name": "Upload Status (Image)",
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"type\": \"image\",\n  \"caption\": \"Optional caption\",\n  \"data\": \"BASE64_STRING_HERE\",\n  \"mimeType\": \"image/jpeg\"\n}"
-            },
-            "url": {"raw": "{{baseUrl}}/status/upload", "host": ["{{baseUrl}}"], "path": ["status", "upload"]},
-            "description": "رفع صورة كحالة (استوري). data = base64 بدون data:image/...;base64, أو معه."
-          }
-        },
-        {
-          "name": "Get Statuses",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/status?sessionId={{sessionId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["status"],
-              "query": [{"key": "sessionId", "value": "{{sessionId}}"}]
-            },
-            "description": "جلب قائمة البث/الحالات (statuses) المتاحة"
-          }
-        },
-        {
-          "name": "Delete Status",
-          "request": {
-            "method": "DELETE",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"messageId\": \"STATUS_MESSAGE_ID\"\n}"
-            },
-            "url": {"raw": "{{baseUrl}}/status", "host": ["{{baseUrl}}"], "path": ["status"]},
-            "description": "حذف حالة (استوري) بالـ messageId المرجع من رفع الحالة أو من getStatuses"
-          }
-        }
-      ]
-    }
-  ]
-}
+    ]
+  }

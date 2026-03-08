@@ -30,13 +30,21 @@ async function getChats(req, res) {
 
     if (!cacheValid) {
       const chats = await state.client.getChats();
-      const list = chats.map((chat) => ({
-        id: chat.id?._serialized ?? chat.id?.id ?? String(chat.id),
-        name: chat.name ?? "",
-        isGroup: Boolean(chat.isGroup),
-        timestamp: chat.timestamp ?? null,
-        unreadCount: chat.unreadCount ?? 0,
-      }));
+      const list = chats.map((chat) => {
+        const id = chat.id?._serialized ?? chat.id?.id ?? String(chat.id);
+        const isGroup = Boolean(chat.isGroup);
+        const out = {
+          id,
+          name: chat.name ?? "",
+          isGroup,
+          timestamp: chat.timestamp ?? null,
+          unreadCount: chat.unreadCount ?? 0,
+        };
+        if (!isGroup && id && id.includes("@c.us")) {
+          out.phoneNumber = id.replace(/@c\.us$/, "");
+        }
+        return out;
+      });
       chatsCache[sessionId] = { list, fetchedAt: now };
       cached = chatsCache[sessionId];
     }
