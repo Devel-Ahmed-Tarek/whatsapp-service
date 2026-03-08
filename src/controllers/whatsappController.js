@@ -354,6 +354,140 @@ async function removeParticipants(req, res) {
   }
 }
 
+async function setGroupSendPermission(req, res) {
+  try {
+    const { sessionId, groupId: rawGroupId, onlyAdmins } = req.body;
+
+    const groupId = normalizeGroupId(rawGroupId);
+    if (!groupId) {
+      return res.status(400).json({ error: "groupId required (e.g. 120363xxx@g.us)" });
+    }
+
+    if (typeof onlyAdmins !== "boolean") {
+      return res.status(400).json({ error: "onlyAdmins required (true = قفل: فقط الأدمنز يبعوا، false = فتح: الكل يبعّت)" });
+    }
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
+    }
+
+    const chat = await state.client.getChatById(groupId);
+    if (!chat || !chat.isGroup) {
+      return res.status(404).json({ groupId, error: "Group not found" });
+    }
+
+    const ok = await chat.setMessagesAdminsOnly(onlyAdmins);
+
+    res.json({
+      success: true,
+      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+      groupId,
+      onlyAdmins: Boolean(ok),
+      message: ok
+        ? (onlyAdmins ? "تم قفل المجموعة: فقط الأدمنز يقدرون يبعوا رسائل" : "تم فتح المجموعة: الكل يقدر يبعّت")
+        : "لا تملك صلاحية تغيير إعداد الإرسال",
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: err.message || "لا تملك صلاحية تغيير إعداد الإرسال في المجموعة",
+    });
+  }
+}
+
+async function promoteParticipants(req, res) {
+  try {
+    const sessionId = req.body.sessionId ?? req.query.sessionId;
+    const rawGroupId = req.body.groupId ?? req.query.groupId;
+    const participants = req.body.participants ?? req.query.participants;
+
+    const groupId = normalizeGroupId(rawGroupId);
+    if (!groupId) {
+      return res.status(400).json({ error: "groupId required (e.g. 120363xxx@g.us)" });
+    }
+
+    const participantIds = toParticipantIds(participants);
+    if (participantIds.length === 0) {
+      return res.status(400).json({ error: "participants required (array of phone numbers)" });
+    }
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
+    }
+
+    const chat = await state.client.getChatById(groupId);
+    if (!chat || !chat.isGroup) {
+      return res.status(404).json({ groupId, error: "Group not found" });
+    }
+
+    const result = await chat.promoteParticipants(participantIds);
+
+    res.json({
+      success: true,
+      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+      groupId,
+      status: result?.status,
+      message: "تم ترقية الأعضاء لأدمن (يقدرون يبعوا لو المجموعة مقفولة)",
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: err.message || "لا تملك صلاحية ترقية أعضاء أو العضو ليس في المجموعة",
+    });
+  }
+}
+
+async function demoteParticipants(req, res) {
+  try {
+    const sessionId = req.body.sessionId ?? req.query.sessionId;
+    const rawGroupId = req.body.groupId ?? req.query.groupId;
+    const participants = req.body.participants ?? req.query.participants;
+
+    const groupId = normalizeGroupId(rawGroupId);
+    if (!groupId) {
+      return res.status(400).json({ error: "groupId required (e.g. 120363xxx@g.us)" });
+    }
+
+    const participantIds = toParticipantIds(participants);
+    if (participantIds.length === 0) {
+      return res.status(400).json({ error: "participants required (array of phone numbers)" });
+    }
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
+    }
+
+    const chat = await state.client.getChatById(groupId);
+    if (!chat || !chat.isGroup) {
+      return res.status(404).json({ groupId, error: "Group not found" });
+    }
+
+    const result = await chat.demoteParticipants(participantIds);
+
+    res.json({
+      success: true,
+      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+      groupId,
+      status: result?.status,
+      message: "تم تنزيل الأعضاء من الأدمن (ما يقدروش يبعوا لو المجموعة مقفولة)",
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: err.message || "لا تملك صلاحية تنزيل أعضاء",
+    });
+  }
+}
+
 async function getGroupInfo(req, res) {
   try {
     const sessionId = req.query.sessionId || whatsappService.DEFAULT_SESSION_ID;
@@ -620,6 +754,47 @@ async function deleteStatus(req, res) {
   }
 }
 
+function normalizeChatOrGroupId(raw) {
+  if (!raw || typeof raw !== "string") return null;
+  const s = raw.trim();
+  if (s.includes("@g.us")) return normalizeGroupId(raw);
+  return normalizeChatId(raw);
+}
+
+async function setChatPin(req, res) {
+  try {
+    const { sessionId, chatId: rawChatId, pinned } = req.body;
+
+    const chatId = normalizeChatOrGroupId(rawChatId);
+    if (!chatId) {
+      return res.status(400).json({ error: "chatId required (e.g. 201234567890 or 201234567890@c.us or 120363xxx@g.us)" });
+    }
+
+    if (typeof pinned !== "boolean") {
+      return res.status(400).json({ error: "pinned required (true to pin, false to unpin)" });
+    }
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
+    }
+
+    const result = pinned ? await state.client.pinChat(chatId) : await state.client.unpinChat(chatId);
+
+    res.json({
+      success: true,
+      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+      chatId,
+      pinned: Boolean(result),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   getChats,
   getMessages,
@@ -628,9 +803,13 @@ module.exports = {
   createGroup,
   addParticipants,
   removeParticipants,
+  setGroupSendPermission,
+  promoteParticipants,
+  demoteParticipants,
   getGroupInfo,
   sendMessageToGroup,
   updateGroup,
+  setChatPin,
   uploadStatus,
   getStatuses,
   deleteStatus,

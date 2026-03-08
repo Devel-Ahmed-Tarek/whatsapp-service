@@ -7,7 +7,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:3000"
+      "value": "http://72.62.151.211:3000"
     },
     {
       "key": "sessionId",
@@ -219,6 +219,19 @@
       }
     },
     {
+      "name": "Pin / Unpin Chat (تثبيت شات أو مجموعة)",
+      "request": {
+        "method": "PATCH",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"chatId\": \"201234567890@c.us\",\n  \"pinned\": true\n}"
+        },
+        "url": {"raw": "{{baseUrl}}/chat/pin", "host": ["{{baseUrl}}"], "path": ["chat", "pin"]},
+        "description": "تثبيت أو إلغاء تثبيت شات (محادثة أو مجموعة). chatId: رقم@c.us أو مجموعة@g.us. pinned: true = تثبيت، false = إلغاء تثبيت"
+      }
+    },
+    {
       "name": "Delete Session (فك الربط)",
       "request": {
         "method": "DELETE",
@@ -278,6 +291,45 @@
             },
             "url": {"raw": "{{baseUrl}}/group/remove-participants", "host": ["{{baseUrl}}"], "path": ["group", "remove-participants"]},
             "description": "إزالة أعضاء من المجموعة"
+          }
+        },
+        {
+          "name": "قفل/فتح الإرسال (فقط أدمنز يبعوا)",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"onlyAdmins\": true\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/group/send-permission", "host": ["{{baseUrl}}"], "path": ["group", "send-permission"]},
+            "description": "onlyAdmins: true = قفل المجموعة (فقط الأدمنز يبعوا)، false = فتح (الكل يبعّت)"
+          }
+        },
+        {
+          "name": "ترقية أعضاء (أدمن)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"participants\": [\"201111111111\"]\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/group/promote", "host": ["{{baseUrl}}"], "path": ["group", "promote"]},
+            "description": "ترقية رقم لأدمن فيقدر يبعّت لو المجموعة مقفولة"
+          }
+        },
+        {
+          "name": "تنزيل أعضاء (إلغاء أدمن)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"groupId\": \"120363xxx@g.us\",\n  \"participants\": [\"201111111111\"]\n}"
+            },
+            "url": {"raw": "{{baseUrl}}/group/demote", "host": ["{{baseUrl}}"], "path": ["group", "demote"]},
+            "description": "تنزيل رقم من الأدمن فما يقدرش يبعّت لو المجموعة مقفولة"
           }
         },
         {

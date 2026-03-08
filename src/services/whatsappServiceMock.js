@@ -19,9 +19,12 @@ function createMockClient() {
         sendMessage: () => Promise.resolve({ id: { _serialized: "mock_msg_1" }, timestamp: Math.floor(Date.now() / 1000) }),
         addParticipants: () => Promise.resolve({}),
         removeParticipants: () => Promise.resolve({ status: 200 }),
+        promoteParticipants: () => Promise.resolve({ status: 200 }),
+        demoteParticipants: () => Promise.resolve({ status: 200 }),
         setSubject: () => Promise.resolve(true),
         setDescription: () => Promise.resolve(true),
         setPicture: () => Promise.resolve(true),
+        setMessagesAdminsOnly: () => Promise.resolve(true),
       }),
     getMessageById: () => Promise.resolve(null),
     getBroadcasts: () => Promise.resolve([]),
@@ -35,6 +38,8 @@ function createMockClient() {
       }),
     revokeStatusMessage: () => Promise.resolve(),
     setStatus: () => Promise.resolve(),
+    pinChat: () => Promise.resolve(true),
+    unpinChat: () => Promise.resolve(true),
   };
 }
 
