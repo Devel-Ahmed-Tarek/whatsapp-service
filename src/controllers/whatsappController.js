@@ -95,6 +95,25 @@ async function getMessages(req, res) {
       return res.status(404).json({ chatId, error: "Chat not found" });
     }
 
+    let phoneNumber = null;
+    if (!chat.isGroup) {
+      const id = chat.id?._serialized ?? chat.id?.id ?? String(chat.id);
+      if (id && id.endsWith("@c.us")) {
+        phoneNumber = id.replace(/@c\.us$/, "");
+      } else if (id && id.endsWith("@lid") && state.client.getContactLidAndPhone) {
+        try {
+          const result = await state.client.getContactLidAndPhone([id]);
+          const first = Array.isArray(result) ? result[0] : result;
+          const pn = first?.pn ?? first?.number ?? first?.jid;
+          if (pn && typeof pn === "string") {
+            phoneNumber = pn.replace(/@c\.us$/, "");
+          }
+        } catch (_) {
+          // LID قد لا يرجع رقم إن لم يكن في جهات الاتصال أو المحادثة مفتوحة
+        }
+      }
+    }
+
     const searchOptions = { limit: MESSAGES_FETCH_MAX };
     if (fromMe !== undefined) searchOptions.fromMe = fromMe;
 
@@ -133,6 +152,7 @@ async function getMessages(req, res) {
     res.json({
       sessionId,
       chatId,
+      phoneNumber,
       total,
       limit,
       offset,
