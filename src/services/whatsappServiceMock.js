@@ -25,6 +25,7 @@ function createMockClient() {
         setDescription: () => Promise.resolve(true),
         setPicture: () => Promise.resolve(true),
         setMessagesAdminsOnly: () => Promise.resolve(true),
+        sendSeen: () => Promise.resolve(true),
       }),
     getMessageById: () => Promise.resolve(null),
     getBroadcasts: () => Promise.resolve([]),

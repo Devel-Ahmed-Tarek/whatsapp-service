@@ -232,6 +232,19 @@
         }
       },
       {
+        "name": "Mark Chat Seen (الرسايل اتشافت)",
+        "request": {
+          "method": "POST",
+          "header": [{"key": "Content-Type", "value": "application/json"}],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"chatId\": \"201234567890@c.us\"\n}"
+          },
+          "url": {"raw": "{{baseUrl}}/chat/seen", "host": ["{{baseUrl}}"], "path": ["chat", "seen"]},
+          "description": "تعليم الشات كمشوف (الرسايل اتشافت - الزرقاء). يدعم محادثة أو مجموعة. chatId: رقم@c.us أو @lid أو مجموعة@g.us"
+        }
+      },
+      {
         "name": "Delete Session (فك الربط)",
         "request": {
           "method": "DELETE",

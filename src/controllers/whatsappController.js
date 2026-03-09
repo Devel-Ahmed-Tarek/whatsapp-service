@@ -823,11 +823,48 @@ async function setChatPin(req, res) {
   }
 }
 
+async function sendChatSeen(req, res) {
+  try {
+    const sessionId = req.body.sessionId ?? req.query.sessionId;
+    const rawChatId = req.body.chatId ?? req.query.chatId;
+
+    const chatId = normalizeChatOrGroupId(rawChatId);
+    if (!chatId) {
+      return res.status(400).json({ error: "chatId required (e.g. 201234567890 or 201234567890@c.us or 131770066424034@lid or 120363xxx@g.us)" });
+    }
+
+    const state = whatsappService.getSessionState(sessionId);
+    if (!state) {
+      return res.status(404).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "Session not found" });
+    }
+    if (!state.clientReady) {
+      return res.status(503).json({ sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID, error: "WhatsApp client not ready" });
+    }
+
+    const chat = await state.client.getChatById(chatId);
+    if (!chat) {
+      return res.status(404).json({ chatId, error: "Chat not found" });
+    }
+
+    const result = await chat.sendSeen();
+
+    res.json({
+      success: true,
+      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+      chatId,
+      seen: Boolean(result),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 module.exports = {
   getChats,
   getMessages,
   getMessageMedia,
   sendMessage,
+  sendChatSeen,
   createGroup,
   addParticipants,
   removeParticipants,

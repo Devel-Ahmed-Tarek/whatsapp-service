@@ -6,6 +6,7 @@ router.get("/chats", whatsappController.getChats);
 router.get("/messages", whatsappController.getMessages);
 router.get("/message-media", whatsappController.getMessageMedia);
 router.post("/send-message", whatsappController.sendMessage);
+router.post("/chat/seen", whatsappController.sendChatSeen);
 router.patch("/chat/pin", whatsappController.setChatPin);
 
 // Group endpoints
