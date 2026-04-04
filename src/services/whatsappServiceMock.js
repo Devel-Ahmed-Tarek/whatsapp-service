@@ -67,7 +67,7 @@ function getSessionState(sessionId) {
   return sessions[id] || null;
 }
 
-async function destroySession(sessionId) {
+async function destroySession(sessionId, _options = {}) {
   const id = sessionId || DEFAULT_SESSION_ID;
   if (sessions[id]) {
     delete sessions[id];
