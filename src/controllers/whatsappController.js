@@ -1,4 +1,4 @@
-const { MessageMedia } = require("whatsapp-web.js");
+const { MessageMedia, Message } = require("whatsapp-web.js");
 const whatsappService = require("../services/whatsappService");
 const { normalizeChatId, normalizeGroupId, toParticipantIds, serializeMessage } = require("../utils/formatter");
 
@@ -7,6 +7,113 @@ const STATUS_BROADCAST_ID = "status@broadcast";
 const CHATS_CACHE_TTL_MS = 5 * 60 * 1000;
 const chatsCache = {};
 const MESSAGES_FETCH_MAX = 300;
+
+class LidUnresolvedError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "LidUnresolvedError";
+  }
+}
+
+async function lookupPnForLid(client, lid) {
+  if (typeof client.getContactLidAndPhone !== "function") return null;
+  try {
+    const result = await client.getContactLidAndPhone([lid]);
+    const first = Array.isArray(result) ? result[0] : result;
+    const pn = first?.pn;
+    if (pn && typeof pn === "string" && pn.includes("@c.us")) return pn;
+  } catch (_) {
+    // not mapped yet
+  }
+  return null;
+}
+
+/**
+ * LID-only threads break WhatsApp Web internals during fetchMessages (e.g. waitForChatLoading).
+ * Resolve to @c.us when the client can map the user.
+ */
+async function effectiveChatIdForMessageFetch(client, chatId) {
+  if (!chatId || !String(chatId).endsWith("@lid")) {
+    return { effectiveChatId: chatId, resolvedLidToPn: false };
+  }
+  const pn = await lookupPnForLid(client, chatId);
+  if (pn) return { effectiveChatId: pn, resolvedLidToPn: true };
+  return { effectiveChatId: chatId, resolvedLidToPn: false };
+}
+
+/**
+ * Resolve a free-form recipient (digits, "...@c.us" or "...@lid") to a chatId
+ * that WhatsApp can deliver to. For LIDs we ask the library for the PN binding,
+ * and if that fails we warm the chat cache via getChatById and retry.
+ * Throws LidUnresolvedError when an @lid cannot be mapped to a phone number.
+ */
+async function resolveSendChatId(client, rawPhoneNumber) {
+  const raw = String(rawPhoneNumber || "").trim();
+  if (!raw) throw new Error("phoneNumber required");
+
+  if (raw.endsWith("@lid")) {
+    let pn = await lookupPnForLid(client, raw);
+    if (pn) return { chatId: pn, originalChatId: raw, resolvedLidToPn: true };
+
+    try {
+      await client.getChatById(raw);
+    } catch (_) {
+      // ignore — warming may fail when the chat is not yet known
+    }
+
+    pn = await lookupPnForLid(client, raw);
+    if (pn) return { chatId: pn, originalChatId: raw, resolvedLidToPn: true };
+
+    throw new LidUnresolvedError(
+      "Cannot resolve this @lid to a phone number. Open the chat once in linked WhatsApp Web (so the LID-to-phone binding gets cached), or call /send-message with the contact's phone in ...@c.us form."
+    );
+  }
+
+  if (raw.endsWith("@c.us")) {
+    return { chatId: raw, originalChatId: raw, resolvedLidToPn: false };
+  }
+
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) throw new Error("phoneNumber must contain digits, ...@c.us or ...@lid");
+  const chatId = `${digits}@c.us`;
+  return { chatId, originalChatId: raw, resolvedLidToPn: false };
+}
+
+function isLidBindingMissingError(err) {
+  const msg = err && err.message ? String(err.message) : "";
+  return /No LID for users/i.test(msg) || /no\s+pn\s+for/i.test(msg);
+}
+
+/**
+ * fetchMessages in whatsapp-web.js calls loadEarlierMsgs in a loop; recent WA Web
+ * builds throw (e.g. waitForChatLoading). This path only uses msgs already in the
+ * client (no loadEarlierMsgs), so the list may be short until the user opens the chat in Web.
+ */
+async function fetchMessagesInStoreOnly(client, chatIdSerialized, searchOptions) {
+  const models = await client.pupPage.evaluate(
+    async (chatId, searchOptions) => {
+      const msgFilter = (m) => {
+        if (m.isNotification) return false;
+        if (searchOptions && searchOptions.fromMe !== undefined && m.id.fromMe !== searchOptions.fromMe) {
+          return false;
+        }
+        return true;
+      };
+      const chat = await window.WWebJS.getChat(chatId, { getAsModel: false });
+      if (!chat || !chat.msgs) return [];
+      let msgs = chat.msgs.getModelsArray().filter(msgFilter);
+      msgs.sort((a, b) => ((a.t > b.t) ? 1 : -1));
+      const lim = searchOptions && searchOptions.limit > 0 ? searchOptions.limit : msgs.length;
+      if (msgs.length > lim) {
+        msgs = msgs.splice(msgs.length - lim);
+      }
+      return msgs.map((m) => window.WWebJS.getMessageModel(m));
+    },
+    chatIdSerialized,
+    searchOptions
+  );
+  return models.map((m) => new Message(client, m));
+}
 
 async function getChats(req, res) {
   try {
@@ -90,7 +197,11 @@ async function getMessages(req, res) {
       return res.status(503).json({ sessionId, error: "WhatsApp client not ready" });
     }
 
-    const chat = await state.client.getChatById(chatId);
+    const { effectiveChatId, resolvedLidToPn } = await effectiveChatIdForMessageFetch(
+      state.client,
+      chatId
+    );
+    const chat = await state.client.getChatById(effectiveChatId);
     if (!chat) {
       return res.status(404).json({ chatId, error: "Chat not found" });
     }
@@ -109,7 +220,7 @@ async function getMessages(req, res) {
             phoneNumber = pn.replace(/@c\.us$/, "");
           }
         } catch (_) {
-          // LID قد لا يرجع رقم إن لم يكن في جهات الاتصال أو المحادثة مفتوحة
+          // LID may not return a number yet.
         }
       }
     }
@@ -117,7 +228,31 @@ async function getMessages(req, res) {
     const searchOptions = { limit: MESSAGES_FETCH_MAX };
     if (fromMe !== undefined) searchOptions.fromMe = fromMe;
 
-    let rawMessages = await chat.fetchMessages(searchOptions);
+    const chatSerializedId = chat.id?._serialized ?? chat.id?.id ?? String(chat.id);
+    let rawMessages;
+    let historySource = "full";
+    try {
+      rawMessages = await chat.fetchMessages(searchOptions);
+    } catch (err) {
+      try {
+        rawMessages = await fetchMessagesInStoreOnly(
+          state.client,
+          chatSerializedId,
+          searchOptions
+        );
+        historySource = "in_memory";
+      } catch (_) {
+        if (String(chatId).endsWith("@lid") && !resolvedLidToPn) {
+          return res.status(422).json({
+            sessionId,
+            chatId,
+            error:
+              "Cannot load messages for this @lid chat. WhatsApp did not return a @c.us mapping yet — open the chat in linked WhatsApp Web, save the contact with a number, or call this endpoint with the phone in ...@c.us form if you have it.",
+          });
+        }
+        throw err;
+      }
+    }
 
     if (order === "desc") {
       rawMessages.reverse();
@@ -152,6 +287,8 @@ async function getMessages(req, res) {
     res.json({
       sessionId,
       chatId,
+      ...(resolvedLidToPn && effectiveChatId !== chatId ? { fetchedChatId: effectiveChatId } : {}),
+      ...(historySource === "in_memory" ? { historySource } : {}),
       phoneNumber,
       total,
       limit,
@@ -212,33 +349,91 @@ async function getMessageMedia(req, res) {
 }
 
 async function sendMessage(req, res) {
-  try {
-    const { phoneNumber, message, sessionId } = req.body;
+  const { phoneNumber, message, sessionId: rawSessionId } = req.body || {};
+  const sessionId = rawSessionId || whatsappService.DEFAULT_SESSION_ID;
+  const originalRequested = phoneNumber == null ? "" : String(phoneNumber);
 
+  try {
     if (!phoneNumber || !message) {
-      return res.status(400).json({ error: "phoneNumber and message required" });
+      return res.status(400).json({
+        success: false,
+        error: "missing_required_fields",
+        message: "phoneNumber and message are required",
+        originalRequested,
+        sessionId,
+      });
     }
 
-    const state = whatsappService.getOrCreateSession(sessionId);
+    const state = whatsappService.getOrCreateSession(rawSessionId);
 
     if (!state.clientReady) {
-      return res.status(503).json({ error: "WhatsApp client not ready" });
+      return res.status(503).json({
+        success: false,
+        error: "client_not_ready",
+        message: "WhatsApp client not ready",
+        originalRequested,
+        sessionId,
+      });
     }
 
-    const normalized = String(phoneNumber).replace(/\D/g, "");
-    const chatId = `${normalized}@c.us`;
+    let resolved;
+    try {
+      resolved = await resolveSendChatId(state.client, phoneNumber);
+    } catch (err) {
+      if (err instanceof LidUnresolvedError) {
+        return res.status(422).json({
+          success: false,
+          error: "lid_unresolvable",
+          message: "Cannot resolve LID to a sendable account. Try opening the chat once.",
+          originalRequested,
+          sessionId,
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        error: "invalid_phone",
+        message: err.message,
+        originalRequested,
+        sessionId,
+      });
+    }
 
-    const result = await state.client.sendMessage(chatId, message);
+    const { chatId } = resolved;
+
+    let result;
+    try {
+      result = await state.client.sendMessage(chatId, message);
+    } catch (err) {
+      if (isLidBindingMissingError(err)) {
+        return res.status(422).json({
+          success: false,
+          error: "lid_binding_missing",
+          message:
+            "WhatsApp does not have the LID-to-phone identity binding cached for this contact yet. Open the chat once in linked WhatsApp Web and retry.",
+          originalRequested,
+          chatId,
+          sessionId,
+        });
+      }
+      throw err;
+    }
 
     res.json({
       success: true,
-      id: result.id?._serialized,
-      timestamp: result.timestamp,
+      messageId: result.id?._serialized ?? null,
       to: chatId,
-      sessionId: sessionId || whatsappService.DEFAULT_SESSION_ID,
+      originalRequested,
+      timestamp: result.timestamp ?? null,
+      sessionId,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({
+      success: false,
+      error: "internal_error",
+      message: err.message,
+      originalRequested,
+      sessionId,
+    });
   }
 }
 

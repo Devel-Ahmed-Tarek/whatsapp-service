@@ -113,7 +113,7 @@ function createSession(sessionId) {
   });
 
   client.on("message", (msg) => {
-    notifyIncomingMessage(sessionId, msg);
+    notifyIncomingMessage(sessionId, msg, client);
   });
 
   console.log(`[Session: ${sessionId}] Initializing client...`);

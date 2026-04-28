@@ -37,13 +37,17 @@ function alreadySentThisMessage(sessionId, msg) {
   return false;
 }
 
-function serializeMessageForWebhook(msg, sessionId) {
+function serializeMessageForWebhook(msg, sessionId, extras = {}) {
   const id = msg.id?._serialized ?? msg.id?.id ?? String(msg.id);
+  const senderId = msg.from ?? null;
+  const senderPn = extras.senderPn ?? (typeof senderId === "string" && senderId.endsWith("@c.us") ? senderId : null);
   return {
     sessionId,
     messageId: id,
-    from: msg.from ?? null,
+    from: senderId,
     to: msg.to ?? null,
+    senderId,
+    senderPn,
     body: msg.body ?? "",
     type: msg.type ?? "chat",
     timestamp: msg.timestamp ?? null,
@@ -54,6 +58,20 @@ function serializeMessageForWebhook(msg, sessionId) {
     isStatus: Boolean(msg.isStatus),
     broadcast: Boolean(msg.broadcast),
   };
+}
+
+async function resolvePnForFrom(client, from) {
+  if (!client || typeof client.getContactLidAndPhone !== "function") return null;
+  if (typeof from !== "string" || !from.endsWith("@lid")) return null;
+  try {
+    const result = await client.getContactLidAndPhone([from]);
+    const first = Array.isArray(result) ? result[0] : result;
+    const pn = first?.pn;
+    if (pn && typeof pn === "string" && pn.includes("@c.us")) return pn;
+  } catch (_) {
+    // mapping not yet available
+  }
+  return null;
 }
 
 function postJson(urlString, payload) {
@@ -99,7 +117,7 @@ function postJson(urlString, payload) {
   });
 }
 
-function notifyIncomingMessage(sessionId, msg) {
+function notifyIncomingMessage(sessionId, msg, client) {
   if (!isWebhookEnabled()) {
     return;
   }
@@ -117,11 +135,14 @@ function notifyIncomingMessage(sessionId, msg) {
     return;
   }
 
-  const payload = serializeMessageForWebhook(msg, sessionId);
-
-  postJson(url, payload).catch((err) => {
-    console.error(`[Webhook incoming] ${sessionId}:`, err.message);
-  });
+  resolvePnForFrom(client, msg.from)
+    .then((senderPn) => {
+      const payload = serializeMessageForWebhook(msg, sessionId, { senderPn });
+      return postJson(url, payload);
+    })
+    .catch((err) => {
+      console.error(`[Webhook incoming] ${sessionId}:`, err.message);
+    });
 }
 
 module.exports = {
